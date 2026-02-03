@@ -76,8 +76,7 @@ public class CommentsTest extends BaseTest {
         int commentId = commentsService.createComment(toDelete).jsonPath().getInt("id");
         Response response = commentsService.deleteComment(commentId);
         response.then().statusCode(200);
-        boolean exists = dbHelper.isCommentExists(commentId);
-        softAssert.assertFalse(exists, "Комментарий не удален из БД");
+        softAssert.assertNull(dbHelper.getCommentById(commentId), "Комментарий не удален из БД");
         softAssert.assertAll();
     }
 

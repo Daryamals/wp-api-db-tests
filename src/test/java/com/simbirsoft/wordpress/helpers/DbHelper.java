@@ -39,11 +39,6 @@ public class DbHelper {
         return null;
     }
 
-    @Step("БД: Проверить существование поста с ID {postId}")
-    public boolean isPostExists(int postId) {
-        return getPostById(postId) != null;
-    }
-
     @Step("БД: Получить комментарий по ID {commentId}")
     public Comment getCommentById(int commentId) {
         String query = "SELECT comment_post_ID, comment_content FROM wp_comments WHERE comment_ID = ?";
@@ -60,11 +55,6 @@ public class DbHelper {
             e.printStackTrace();
         }
         return null;
-    }
-
-    @Step("БД: Проверить существование комментария с ID {commentId}")
-    public boolean isCommentExists(int commentId) {
-        return getCommentById(commentId) != null;
     }
 
     @Step("БД: Закрыть соединение")

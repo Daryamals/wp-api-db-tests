@@ -60,8 +60,8 @@ public class PostsTest extends BaseTest {
         int postId = postsService.createPost(postToDelete).jsonPath().getInt("id");
         Response response = postsService.deletePost(postId);
         response.then().statusCode(200);
-        boolean exists = dbHelper.isPostExists(postId);
-        softAssert.assertFalse(exists, "Пост все еще существует в БД после удаления");
+        softAssert.assertNull(dbHelper.getPostById(postId), "Пост все еще существует в БД после удаления");
+        softAssert.assertAll();
         softAssert.assertAll();
     }
 }
