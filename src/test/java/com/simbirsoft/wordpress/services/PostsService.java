@@ -9,6 +9,13 @@ import static io.restassured.RestAssured.given;
 
 public class PostsService extends ApiService {
 
+    @Step("API: Получить пост по ID {postId}")
+    public Response getPost(int postId) {
+        return given(requestSpec)
+                .queryParam("rest_route", String.format(Endpoints.POST_ID, postId))
+                .get();
+    }
+
     @Step("API: Создать пост")
     public Response createPost(Post post) {
         return given(requestSpec)

@@ -9,6 +9,13 @@ import static io.restassured.RestAssured.given;
 
 public class CommentsService extends ApiService {
 
+    @Step("API: Получить комментарий по ID {commentId}")
+    public Response getComment(int commentId) {
+        return given(requestSpec)
+                .queryParam("rest_route", String.format(Endpoints.COMMENT_ID, commentId))
+                .get();
+    }
+
     @Step("API: Создать комментарий")
     public Response createComment(Comment comment) {
         return given(requestSpec)
