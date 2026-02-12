@@ -3,11 +3,9 @@
 <suite name="Wordpress and Yandex API Suite" parallel="classes" thread-count="4">
     <test name="API Tests">
         <classes>
-            <!--
             <class name="com.simbirsoft.wordpress.tests.PostsTest"/>
             <class name="com.simbirsoft.wordpress.tests.CommentsTest"/>
             <class name="com.simbirsoft.wordpress.tests.DbPreparationTest"/>
-            -->
             <class name="com.simbirsoft.wordpress.tests.YandexDiskFoldersTest"/>
             <class name="com.simbirsoft.wordpress.tests.YandexDiskTest"/>
         </classes>
