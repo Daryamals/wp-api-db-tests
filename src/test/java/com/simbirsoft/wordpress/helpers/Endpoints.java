@@ -6,4 +6,7 @@ public class Endpoints {
     public static final String COMMENTS = "/wp/v2/comments";
     public static final String COMMENT_ID = "/wp/v2/comments/%d";
     public static final String YANDEX_DISK = "/v1/disk/";
+
+    public static final String YANDEX_DISK_RESOURCES = "/v1/disk/resources";
+    public static final String YANDEX_DISK_RESTORE = "/v1/disk/trash/resources/restore";
 }
