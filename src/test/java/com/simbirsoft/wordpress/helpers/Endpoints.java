@@ -9,4 +9,7 @@ public class Endpoints {
 
     public static final String YANDEX_DISK_RESOURCES = "/v1/disk/resources";
     public static final String YANDEX_DISK_RESTORE = "/v1/disk/trash/resources/restore";
+    public static final String YANDEX_DISK_UPLOAD = "/v1/disk/resources/upload";
+    public static final String YANDEX_DISK_COPY = "/v1/disk/resources/copy";
+    public static final String YANDEX_DISK_DOWNLOAD = "/v1/disk/resources/download";
 }
