@@ -9,6 +9,8 @@ import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 
+import java.io.File;
+
 import static io.restassured.RestAssured.given;
 
 public class YandexDiskService {
@@ -28,6 +30,7 @@ public class YandexDiskService {
     public Response getDiskData(String validToken) {
         return given()
                 .spec(baseSpec)
+                .header("Authorization", "OAuth " + validToken)
                 .get(Endpoints.YANDEX_DISK);
     }
 
@@ -71,5 +74,51 @@ public class YandexDiskService {
                 .spec(baseSpec)
                 .queryParam("path", path)
                 .put(Endpoints.YANDEX_DISK_RESTORE);
+    }
+
+    @Step("API: Копировать ресурс из {from} в {path}")
+    public Response copyResource(String from, String path, boolean overwrite) {
+        return given()
+                .spec(baseSpec)
+                .queryParam("from", from)
+                .queryParam("path", path)
+                .queryParam("overwrite", overwrite)
+                .post(Endpoints.YANDEX_DISK_COPY);
+    }
+
+    @Step("API: Получить ссылку для загрузки файла")
+    public Response getUploadLink(String path, boolean overwrite) {
+        return given()
+                .spec(baseSpec)
+                .queryParam("path", path)
+                .queryParam("overwrite", overwrite)
+                .get(Endpoints.YANDEX_DISK_UPLOAD);
+    }
+
+    @Step("API: Загрузить файл по полученной ссылке (PUT)")
+    public Response uploadFileToLink(String url, File file) {
+        return given()
+                .filter(new AllureRestAssured())
+                .urlEncodingEnabled(false)
+                .contentType("text/plain")
+                .body(file)
+                .put(url);
+    }
+
+    @Step("API: Получить ссылку для скачивания файла")
+    public Response getDownloadLink(String path) {
+        return given()
+                .spec(baseSpec)
+                .queryParam("path", path)
+                .get(Endpoints.YANDEX_DISK_DOWNLOAD);
+    }
+
+    @Step("API: Скачать файл по ссылке")
+    public byte[] downloadFileFromLink(String url) {
+        return given()
+                .filter(new AllureRestAssured())
+                .urlEncodingEnabled(false)
+                .get(url)
+                .asByteArray();
     }
 }
