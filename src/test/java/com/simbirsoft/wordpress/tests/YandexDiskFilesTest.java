@@ -1,9 +1,9 @@
 package com.simbirsoft.wordpress.tests;
 
+import com.simbirsoft.wordpress.helpers.DiskFileHelper;
 import com.simbirsoft.wordpress.models.DiskError;
 import com.simbirsoft.wordpress.models.DiskLink;
 import com.simbirsoft.wordpress.models.DiskResource;
-
 import com.simbirsoft.wordpress.services.YandexDiskService;
 import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
@@ -25,6 +25,7 @@ import java.nio.file.Files;
 public class YandexDiskFilesTest {
 
     private YandexDiskService diskService;
+    private DiskFileHelper fileHelper;
     private SoftAssert softAssert;
 
     private final String INPUT_FOLDER = "input_data";
@@ -37,27 +38,39 @@ public class YandexDiskFilesTest {
     @BeforeClass
     public void setupClass() {
         diskService = new YandexDiskService();
+        fileHelper = new DiskFileHelper(diskService);
     }
 
     @BeforeMethod
     public void setup() throws IOException {
         softAssert = new SoftAssert();
-        localFile = new File("target/" + FILENAME);
-        String content = "username=SDET\npassword=secret_key";
-        Files.writeString(localFile.toPath(), content);
+        localFile = fileHelper.createLocalFile(FILENAME, "username=SDET\npassword=secret_key");
+        diskService.deleteResource(INPUT_FOLDER, true);
+        diskService.deleteResource(OUTPUT_FOLDER, true);
+        diskService.deleteResource(SDET_FOLDER, true);
     }
 
-    @Test(description = "Тест-кейс №3. Загрузка и копирование файла")
-    @Description("Проверка загрузки файла (PUT), копирования (POST) и обработки конфликтов (409)")
-    public void testUploadAndCopyFile() {
+    @Test(description = "Тест-кейс №3.1: Загрузка файла")
+    @Description("Проверка успешной загрузки файла (PUT запрос)")
+    public void testUploadFile() {
+        String serverPathInput = INPUT_FOLDER + "/" + FILENAME;
+        diskService.createFolder(INPUT_FOLDER);
+        Response linkResponse = diskService.getUploadLink(serverPathInput, true);
+        linkResponse.then().statusCode(200);
+        DiskLink link = linkResponse.as(DiskLink.class);
+        Response uploadResponse = diskService.uploadFileToLink(link.getHref(), localFile);
+        uploadResponse.then().statusCode(201);
+        diskService.getResource(serverPathInput).then().statusCode(200);
+    }
+
+    @Test(description = "Тест-кейс №3.2: Копирование файла")
+    @Description("Проверка копирования файла и валидация метаданных (mime_type, media_type)")
+    public void testCopyFile() {
         String serverPathInput = INPUT_FOLDER + "/" + FILENAME;
         String serverPathOutput = OUTPUT_FOLDER + "/" + FILENAME;
         diskService.createFolder(INPUT_FOLDER);
         diskService.createFolder(OUTPUT_FOLDER);
-        Response linkResponse = diskService.getUploadLink(serverPathInput, true);
-        linkResponse.then().statusCode(200);
-        String uploadHref = linkResponse.as(DiskLink.class).getHref();
-        diskService.uploadFileToLink(uploadHref, localFile).then().statusCode(201);
+        fileHelper.uploadFile(serverPathInput, localFile);
         Response copyResponse = diskService.copyResource(serverPathInput, serverPathOutput, false);
         int statusCode = copyResponse.getStatusCode();
         if (statusCode == 201 || statusCode == 202) {
@@ -72,34 +85,48 @@ public class YandexDiskFilesTest {
                 getRes.then().statusCode(200);
                 resource = getRes.as(DiskResource.class);
             }
-            softAssert.assertEquals(resource.getName(), FILENAME);
-            softAssert.assertNotNull(resource.getMime_type(), "mime_type is null");
-            softAssert.assertNotNull(resource.getMedia_type(), "media_type is null");
+            softAssert.assertEquals(resource.getName(), FILENAME, "Имя файла не совпадает");
+            softAssert.assertNotNull(resource.getMime_type(), "mime_type отсутствует");
+            softAssert.assertNotNull(resource.getMedia_type(), "media_type отсутствует");
         } else {
-            softAssert.fail("Unexpected status: " + statusCode);
+            softAssert.fail("Ожидался статус 201 или 202, но получен: " + statusCode);
         }
-        Response conflictResponse = diskService.copyResource(serverPathInput, serverPathOutput, false);
-        conflictResponse.then().statusCode(409);
-        softAssert.assertEquals(conflictResponse.as(DiskError.class).getError(), "DiskResourceAlreadyExistsError");
         softAssert.assertAll();
     }
 
-    @Test(description = "Тест-кейс №4. Скачивание текстового файла")
+    @Test(description = "Тест-кейс №3.3: Ошибка при дублировании файла")
+    @Description("Проверка получения 409 Conflict при попытке скопировать файл в существующий путь")
+    public void testCopyFileConflict() {
+        String serverPathInput = INPUT_FOLDER + "/" + FILENAME;
+        String serverPathOutput = OUTPUT_FOLDER + "/" + FILENAME;
+        diskService.createFolder(INPUT_FOLDER);
+        diskService.createFolder(OUTPUT_FOLDER);
+        fileHelper.uploadFile(serverPathInput, localFile);
+        diskService.copyResource(serverPathInput, serverPathOutput, false).then();
+        Response conflictResponse = diskService.copyResource(serverPathInput, serverPathOutput, false);
+        conflictResponse.then().statusCode(409);
+        DiskError error = conflictResponse.as(DiskError.class);
+        softAssert.assertEquals(error.getError(), "DiskResourceAlreadyExistsError");
+        softAssert.assertAll();
+    }
+
+    @Test(description = "Тест-кейс №4: Скачивание текстового файла")
     @Description("Загрузка файла, получение ссылки на скачивание и сверка контента")
     public void testDownloadFile() throws IOException {
         String serverPath = SDET_FOLDER + "/" + FILENAME;
         diskService.createFolder(SDET_FOLDER);
-        String uploadHref = diskService.getUploadLink(serverPath, true).as(DiskLink.class).getHref();
-        diskService.uploadFileToLink(uploadHref, localFile).then().statusCode(201);
+        fileHelper.uploadFile(serverPath, localFile);
         Response linkResponse = diskService.getDownloadLink(serverPath);
         linkResponse.then().statusCode(200);
         String downloadHref = linkResponse.as(DiskLink.class).getHref();
         byte[] downloadedBytes = diskService.downloadFileFromLink(downloadHref);
         String downloadedContent = new String(downloadedBytes, StandardCharsets.UTF_8);
         String localContent = Files.readString(localFile.toPath(), StandardCharsets.UTF_8);
-        String normalizedDownloaded = downloadedContent.replace("\r", "");
-        String normalizedLocal = localContent.replace("\r", "");
-        softAssert.assertEquals(normalizedDownloaded, normalizedLocal);
+        softAssert.assertEquals(
+                fileHelper.normalizeContent(downloadedContent),
+                fileHelper.normalizeContent(localContent),
+                "Содержимое файла не совпадает"
+        );
         softAssert.assertAll();
     }
 
@@ -108,6 +135,6 @@ public class YandexDiskFilesTest {
         diskService.deleteResource(INPUT_FOLDER, true);
         diskService.deleteResource(OUTPUT_FOLDER, true);
         diskService.deleteResource(SDET_FOLDER, true);
-        if (localFile.exists()) localFile.delete();
+        fileHelper.deleteLocalFile(localFile);
     }
 }
