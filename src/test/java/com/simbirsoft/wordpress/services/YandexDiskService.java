@@ -121,4 +121,12 @@ public class YandexDiskService {
                 .get(url)
                 .asByteArray();
     }
+
+    @Step("API: Получить плоский список файлов")
+    public Response getFilesList(int limit) {
+        return given()
+                .spec(baseSpec)
+                .queryParam("limit", limit)
+                .get(Endpoints.YANDEX_DISK_FILES);
+    }
 }
