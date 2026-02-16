@@ -11,4 +11,8 @@ public class DiskResource {
     private String path;
     private String created;
     private String modified;
+    private String md5;
+    private long size;
+    private String mime_type;
+    private String media_type;
 }
